@@ -1,0 +1,228 @@
+#+title:  ob-fsharp
+#+author: Ellis Kenyő
+#+date: 2022-04-06
+#+latex_class: chameleon
+
+* Introduction
+F# is a functional-first, general purpose, strongly typed, multi-paradigm
+programming language that encompasses functional, imperative, and
+object-oriented programming methods. It sits within the ML family of languages
+and runs on the dotnet ecosystem, providing first-class interoperability between
+C# and F#.
+
+This package aims to allow F# code to be executed directly within org-babel code
+blocks. These code blocks can then be exported to a document, along with their
+results.
+
+The following covers how to implement F# source code blocks in org-mode
+documents.
+
+* Requirements
+In order to have a fully working F# setup, the following are needed:
+
+- [[https://dotnet.microsoft.com/en-us/download][dotnet]] (Any version past 2.1 should be fine, the latest is always recommended)
+- [[http://www.gnu.org/software/emacs/][emacs 26.1]] or greater
+- [[https://orgmode.org/][org-mode]]
+- [[https://github.com/fsharp/emacs-fsharp-mode][fsharp-mode]] (needed for some of the complex formatting and optimal editing experience)
+
+* Instructions for installation
+The following section is a recommended source of instructions for installing a
+working F#/Emacs system. These instructions already assume you have a working
+dotnet installation.
+
+** fsharp-mode
+*** Starter Kits
+**** Doom
+Enable the =:lang fsharp= module in your =$DOOMDIR/init.el= file and =doom sync=
+
+**** Spacemacs
+Add the =fsharp= layer to =dotspacemacs-configuration-layers= in your =.spacemacs=
+file
+
+*** Packager manager
+Using your desired package manager of choice, add a recipe for =fsharp-mode=
+(MELPA)
+
+*** Manually
+Clone the repo to a location of your choosing, then add the following line to
+your =.emacs= or =init.el= (replacing the string with your local path to where you
+cloned fsharp-mode)
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path "/full-path-to/fsharp-mode")
+#+end_src
+
+** Configure org-mode
+Add the following lines to your =.emacs= or =init.el= to enable support for F# code
+blocks
+
+#+begin_src emacs-lisp
+(require 'org)
+(require 'ob-fsharp)
+#+end_src
+
+=fsharp-mode= should be required as needed
+
+* An Introduction to Org Code Block Evaluation
+This is a simple example which evaluates emacs LISP code. There's no direct link
+to file on the filesystem with this exporter, so the following examples can be
+created on any file anywhere.
+
+For the purposes of these instructions, we will use =/tmp/emacs-fsharp.org= as the file.
+
+Copy the following example into the file:
+
+#+begin_example
+#+BEGIN_SRC emacs-lisp
+    (message "Hello, world!")
+#+END_SRC
+#+end_example
+
+Notice that a ``code block'' is delimited by the lines =#+BEGIN_SRC emacs-lisp=
+and =#+END_SRC=.
+
+To evaluate the code block, input =C-c C-c= anywhere inside the delimiters. The
+above example should output "Hello, world!" into the minibuffer.
+
+There are a myriad of possibilities with org-babel, for more information one should endeavour to seek out the org-mode manual and
+[[https://orgmode.org/worg/org-contrib/babel/header-args.html][Header arguments and result types in Org Babel]].
+
+In order to execute F# code, a standard dotnet installation is required (follow
+the above instructions if that's not the case). For any non-standard setups,
+there are a number of variables exposed to allow you to customize the
+environment.
+
+The =org-babel-fsharp-dotnet-command= variable can be set to the dotnet/mono
+executable used to create a REPL, and =org-babel-fsharp-command-args= can be
+customized to support a mono environment if required.
+
+Assuming a standard setup, the following examples should run without any
+configuration on your end.
+
+* Examples
+The following examples should be copied into your temporary org file and executed within.
+
+After copying each block, place the cursor anywhere inside the block and press
+=C-c C-c=. Your results should match up with the examples.
+
+#+begin_example
+#+begin_src fsharp
+
+#+end_src
+#+end_example
+
+** Simple print
+
+#+begin_example
+#+begin_src fsharp
+printfn "Hello"
+#+end_src
+
+#+RESULTS:
+: Hello
+#+end_example
+
+The following example should print the message in the minibuffer:
+
+#+begin_example
+#+begin_src fsharp :results silent
+printfn "I'm in the minibuffer!"
+#+end_src
+#+end_example
+
+** Return types
+Array/list types should return their results as a table where applicable
+
+#+begin_example
+#+begin_src fsharp
+[1; 2; 3]
+#+end_src
+
+#+RESULTS:
+| 1 | 2 | 3 |
+#+end_example
+
+/Unless/ told otherwise
+
+#+begin_example
+#+begin_src fsharp :results raw
+[1; 2; 3]
+#+end_src
+
+#+RESULTS:
+val it: int list = [1; 2; 3]
+#+end_example
+
+** Sessions
+The exporter also handles sessions, if you wanted to have multiple blocks run in an isolated environment.
+
+Copy the following examples, and try executing the bottom one first.
+
+#+begin_example
+#+begin_src fsharp :session ob-fsharp
+let adder a = a + 5
+#+end_src
+
+#+begin_src fsharp :session ob-fsharp
+adder 5
+#+end_src
+
+#+RESULTS:
+: adder 5;;
+:   ^^^^^
+:
+: /private/tmp/stdin(1,1): error FS0039: The value or constructor 'adder' is not defined.
+#+end_example
+
+As expected, you can't use a function before it's defined. Running both in sequence should produce the following:
+
+#+begin_example
+#+begin_src fsharp :session ob-fsharp
+let adder a = a + 5
+#+end_src
+
+#+RESULTS:
+: val adder: a: int -> int
+
+#+begin_src fsharp :session ob-fsharp
+adder 5
+#+end_src
+
+#+RESULTS:
+: 10
+#+end_example
+
+** Complex example
+*NOTE*
+
+Currently blocked by [[https://github.com/fsharp/emacs-fsharp-mode/issues/293][this]] issue. This in theory should work, but in reality it breaks the buffer.
+
+Let's try a more complicated example:
+
+#+begin_example
+#+begin_src fsharp :session data
+#r "nuget: FSharp.Data"
+open FSharp.Data
+#+end_src
+
+#+begin_src fsharp :session data
+[<Literal>]
+let sample = "http://api.openweathermap.org/data/2.5/weather?q=London"
+let apiUrl = "http://api.openweathermap.org/data/2.5/weather?q="
+
+type Weather = JsonProvider<sample>
+#+end_src
+
+#+begin_src fsharp :session data
+let sf = Weather.Load(apiUrl + "San Francisco")
+sf.Main.Temp
+#+end_src
+#+end_example
+
+* Further reading
+The preceding examples are well-suited to a beginner to F#, for further reading
+there are a number of useful resources:
+
+- [[https://fsharpforfunandprofit.com/][F# for Fun & Profit]]
+- [[https://www.pluralsight.com/search?q=*&categories=course&roles=software-development%7C&subjects=f%23][Pluralsight]]
+- [[https://www.reddit.com/r/fsharp/][Reddit]]
