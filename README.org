@@ -193,9 +193,6 @@ adder 5
 #+end_example
 
 ** Complex example
-*NOTE*
-
-Currently blocked by [[https://github.com/fsharp/emacs-fsharp-mode/issues/293][this]] issue. This in theory should work, but in reality it breaks the buffer.
 
 Let's try a more complicated example:
 
